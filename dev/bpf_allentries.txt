@@ -1,0 +1,1 @@
+sudo bpftrace -e 'tracepoint:syscalls:sys_enter_* /comm != "bpftrace"/ {printf("Process Name: %s\nSyscall Requested: %s\n", comm, probe);}'
