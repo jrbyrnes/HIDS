@@ -10,26 +10,25 @@ struct data_t {
 	u64 total_ns;
 };
 
-BPF_HASH(start, u64, u64);
+BPF_HASH(start, u32, u64);
 BPF_HASH(data, u32, struct data_t);
 
 TRACEPOINT_PROBE(raw_syscalls, sys_enter)
 {
-	u64 pid_tgid = bpf_get_current_pid_tgid();
+	u32 syscall_id = args->id;
 	u64 t = bpf_ktime_get_ns();
-	start.update(&pid_tgid, &t);
+	start.update(&syscall_id, &t);
 	return 0;
 }
 
 TRACEPOINT_PROBE(raw_syscalls, sys_exit)
 {
-	u64 pid_tgid = bpf_get_current_pid_tgid();
-	u32 key = pid_tgid >> 32;
+	u32 syscall_id = args->id;
 	struct data_t *val, zero = {};
-	u64 *start_ns = start.lookup(&pid_tgid);
+	u64 *start_ns = start.lookup(&syscall_id);
 	if (!start_ns)
 		return 0;
-	val = data.lookup_or_try_init(&key, &zero);
+	val = data.lookup_or_try_init(&syscall_id, &zero);
 	if (val) {
 		val->count++;	
 		val->total_ns += bpf_ktime_get_ns() - *start_ns;
